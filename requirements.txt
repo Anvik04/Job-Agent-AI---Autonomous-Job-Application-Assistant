@@ -1,0 +1,6 @@
+apscheduler==3.10.4
+pandas==2.2.3
+playwright==1.53.0
+pywebview==5.1
+python-dotenv==1.0.1
+streamlit==1.44.1

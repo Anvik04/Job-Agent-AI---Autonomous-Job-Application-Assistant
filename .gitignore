@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+data/job_agent.db
+data/pids/
+data/runtime_logs/
