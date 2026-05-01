@@ -28,12 +28,21 @@ def preference_score(profile_row, job: dict) -> int:
     work_modes = json.loads(profile_row["work_modes"] or "[]")
     job_types = json.loads(profile_row["job_types"] or "[]")
 
+    title_desc = normalize(job.get("title", "")) + " " + normalize(job.get("description", ""))
+    if "conference" in title_desc or "meeting" in title_desc:
+        return -1000  # Strictly exclude conferences and meetings
+
     score = 0
     if normalize(job["location"]) in {normalize(x) for x in preferred_locations}:
         score += 20
     if normalize(job["work_mode"]) in {normalize(x) for x in work_modes}:
         score += 20
-    if normalize(job["job_type"]) in {normalize(x) for x in job_types}:
-        score += 20
+        
+    # Strictly prefer internships
+    if normalize(job["job_type"]) == "internship" or "intern" in title_desc:
+        score += 40
+    else:
+        return -1000 # Only apply for internships
+
     score += location_opportunity_score(job["location"])
     return score

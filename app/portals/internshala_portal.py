@@ -39,7 +39,10 @@ class InternshalaPortal(BrowserAutomationPortal):
         session_path.parent.mkdir(parents=True, exist_ok=True)
 
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=self.headless)
+            browser = p.chromium.launch(
+                headless=self.headless,
+                args=["--disable-crash-reporter"],
+            )
             context = (
                 browser.new_context(storage_state=str(session_path))
                 if session_path.exists()
@@ -52,30 +55,46 @@ class InternshalaPortal(BrowserAutomationPortal):
                 page.goto(self.jobs_url, wait_until="domcontentloaded", timeout=self.timeout_ms)
                 page.wait_for_selector("div.individual_internship, div.internship_meta", timeout=15000)
 
-                cards = page.locator("div.individual_internship")
+                cards = page.locator("div.individual_internship, div.internship_meta")
+                if cards.count() == 0:
+                    raise RuntimeError("Internshala page loaded but internship cards not found for known selectors.")
                 count = min(cards.count(), 15)
                 for idx in range(count):
                     card = cards.nth(idx)
-                    title = card.locator("a.job-title-href").first.inner_text().strip()
-                    company = card.locator("p.company-name").first.inner_text().strip()
-                    location = card.locator("div.row-1-item.locations").first.inner_text().strip()
-                    href = card.locator("a.job-title-href").first.get_attribute("href") or ""
-                    apply_url = href if href.startswith("http") else f"https://internshala.com{href}"
+                    title_el = card.locator(
+                        "a.job-title-href, a[href*='internship-details'], a:has-text('Internship')"
+                    ).first
+                    title = title_el.inner_text().strip() if title_el.count() else ""
+
+                    company_el = card.locator(
+                        "p.company-name, span.company-name, a.company-name"
+                    ).first
+                    company = company_el.inner_text().strip() if company_el.count() else ""
+
+                    loc_el = card.locator(
+                        "div.row-1-item.locations, span.locations, li.location, span.location"
+                    ).first
+                    location = loc_el.inner_text().strip() if loc_el.count() else ""
+
+                    href = title_el.get_attribute("href") or ""
+                    apply_url = href if href.startswith("http") else f"https://internshala.com{href}" if href else ""
+                    if not apply_url:
+                        apply_url = f"{self.jobs_url}#intern_{idx}"
                     jobs.append(
                         {
-                            "external_id": f"is_{idx}_{abs(hash(apply_url))}",
+                            "external_id": f"is_{idx}_{abs(hash(apply_url + title + company))}",
                             "company": company or "Unknown Company",
                             "title": title or "Internship",
                             "location": location or "India",
-                            "work_mode": "online" if "work from home" in location.lower() else "offline",
+                            "work_mode": "online" if "work from home" in (location or "").lower() else "offline",
                             "job_type": "internship",
-                            "description": f"Internshala listing: {title}",
+                            "description": f"Internshala listing: {title or 'Internship'}",
                             "apply_url": apply_url,
                         }
                     )
                 context.storage_state(path=str(session_path))
-            except Exception:
-                jobs = []
+            except Exception as exc:
+                raise RuntimeError(f"Internshala fetch_jobs failed: {exc}")
             finally:
                 context.close()
                 browser.close()
@@ -89,7 +108,10 @@ class InternshalaPortal(BrowserAutomationPortal):
         session_path.parent.mkdir(parents=True, exist_ok=True)
 
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=self.headless)
+            browser = p.chromium.launch(
+                headless=self.headless,
+                args=["--disable-crash-reporter"],
+            )
             context = (
                 browser.new_context(storage_state=str(session_path))
                 if session_path.exists()

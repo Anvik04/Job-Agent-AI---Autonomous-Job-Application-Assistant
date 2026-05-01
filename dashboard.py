@@ -299,6 +299,11 @@ else:
     if daily_digest_df.empty:
         st.caption("Digest will appear after application records are created.")
     else:
+        st.markdown("##### Application Trends")
+        chart_df = daily_digest_df.groupby("day")[["applied", "failed", "needs_approval", "progressed"]].sum()
+        # Ensure we have at least some columns to plot safely
+        if not chart_df.empty:
+            st.bar_chart(chart_df, color=["#28a745", "#dc3545", "#ffc107", "#007bff"])
         st.dataframe(daily_digest_df, use_container_width=True)
 
     st.subheader("Notification Log")

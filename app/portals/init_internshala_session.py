@@ -17,7 +17,10 @@ def main():
     print("Opening browser for Internshala manual login.")
     print("After login completes, return to terminal and press Enter.")
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)
+        browser = p.chromium.launch(
+            headless=False,
+            args=["--disable-crash-reporter"],
+        )
         context = browser.new_context()
         page = context.new_page()
         page.goto("https://internshala.com/login/user")

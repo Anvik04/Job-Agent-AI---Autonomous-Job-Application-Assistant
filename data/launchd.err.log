@@ -1,0 +1,12 @@
+Traceback (most recent call last):
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/runpy.py", line 197, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/Users/anvikmacbookair/job_auto_agent/app/agent.py", line 298, in <module>
+    run_cycle()
+  File "/Users/anvikmacbookair/job_auto_agent/app/agent.py", line 166, in run_cycle
+    job_id = persist_job(conn, portal.name, job, score)
+  File "/Users/anvikmacbookair/job_auto_agent/app/agent.py", line 24, in persist_job
+    conn.execute(
+sqlite3.OperationalError: database is locked

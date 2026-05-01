@@ -13,7 +13,7 @@ except Exception:  # pragma: no cover
 class NaukriPortal(BrowserAutomationPortal):
     name = "naukri"
     login_url = "https://www.naukri.com/nlogin/login"
-    jobs_url = "https://www.naukri.com/jobs-in-india"
+    jobs_url = "https://www.naukri.com/internship-jobs-in-india"
 
     def _login_if_needed(self, page) -> None:
         page.goto(self.jobs_url, wait_until="domcontentloaded", timeout=self.timeout_ms)
@@ -39,7 +39,10 @@ class NaukriPortal(BrowserAutomationPortal):
         session_path.parent.mkdir(parents=True, exist_ok=True)
 
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=self.headless)
+            browser = p.chromium.launch(
+                headless=self.headless,
+                args=["--disable-crash-reporter"],
+            )
             context = (
                 browser.new_context(storage_state=str(session_path))
                 if session_path.exists()
@@ -51,15 +54,24 @@ class NaukriPortal(BrowserAutomationPortal):
                 page.goto(self.jobs_url, wait_until="domcontentloaded", timeout=self.timeout_ms)
                 page.wait_for_selector("article.jobTuple, div.srp-jobtuple-wrapper", timeout=15000)
                 cards = page.locator("article.jobTuple, div.srp-jobtuple-wrapper")
+                if cards.count() == 0:
+                    raise RuntimeError("Naukri page loaded but job cards not found for known selectors.")
                 count = min(cards.count(), 20)
                 for idx in range(count):
                     card = cards.nth(idx)
-                    title_locator = card.locator("a.title, a[title]").first
+                    title_locator = card.locator(
+                        "a.title, a[title], a.jobTuple-title, a:has-text('Job')"
+                    ).first
                     title = title_locator.inner_text().strip() if title_locator.count() else "Job Opening"
-                    apply_url = title_locator.get_attribute("href") if title_locator.count() else ""
-                    company_locator = card.locator("a.comp-name, a.subTitle, span.comp-name").first
+                    href = title_locator.get_attribute("href") if title_locator.count() else ""
+                    apply_url = href if href and href.startswith("http") else href and f"https://www.naukri.com{href}" or ""
+
+                    company_locator = card.locator(
+                        "a.comp-name, a.subTitle, span.comp-name, span.company-name"
+                    ).first
                     company = company_locator.inner_text().strip() if company_locator.count() else "Unknown Company"
-                    loc_locator = card.locator("span.locWdth, li.location, span.location").first
+
+                    loc_locator = card.locator("span.locWdth, li.location, span.location, span.loc").first
                     location = loc_locator.inner_text().strip() if loc_locator.count() else "India"
                     jobs.append(
                         {
@@ -67,15 +79,15 @@ class NaukriPortal(BrowserAutomationPortal):
                             "company": company,
                             "title": title,
                             "location": location,
-                            "work_mode": "online" if "remote" in location.lower() else "offline",
-                            "job_type": "full-time",
+                            "work_mode": "online" if "remote" in (location or "").lower() else "offline",
+                            "job_type": "internship",
                             "description": f"Naukri listing: {title}",
                             "apply_url": apply_url or self.jobs_url,
                         }
                     )
                 context.storage_state(path=str(session_path))
-            except Exception:
-                jobs = []
+            except Exception as exc:
+                raise RuntimeError(f"Naukri fetch_jobs failed: {exc}")
             finally:
                 context.close()
                 browser.close()
@@ -89,7 +101,10 @@ class NaukriPortal(BrowserAutomationPortal):
         session_path.parent.mkdir(parents=True, exist_ok=True)
 
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=self.headless)
+            browser = p.chromium.launch(
+                headless=self.headless,
+                args=["--disable-crash-reporter"],
+            )
             context = (
                 browser.new_context(storage_state=str(session_path))
                 if session_path.exists()

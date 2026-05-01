@@ -17,7 +17,10 @@ def main():
     print("Opening browser for Naukri manual login.")
     print("After login and OTP/CAPTCHA complete, return to terminal and press Enter.")
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)
+        browser = p.chromium.launch(
+            headless=False,
+            args=["--disable-crash-reporter"],
+        )
         context = browser.new_context()
         page = context.new_page()
         page.goto("https://www.naukri.com/nlogin/login")
